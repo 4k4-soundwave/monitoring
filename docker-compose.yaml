@@ -1,0 +1,88 @@
+version: '3'
+
+services:
+  telegraf:
+    image: telegraf:latest
+    container_name: telegraf
+    environment:
+      - HOSTNAME=telegraf-mac-os
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf:ro
+    networks:
+      - tick_net
+    depends_on:
+      - influxdb
+
+  influxdb:
+    image: influxdb:1.8-alpine
+    container_name: influxdb
+    platform: linux/amd64
+    # environment:
+    #   - DOCKER_INFLUXDBDB=mydb
+    #   - DOCKER_INFLUXDB_INIT_USERNAME=myUsername
+    #   - DOCKER_INFLUXDB_INIT_PASSWORD=myPassword
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+      - ./influxdb/:/etc/influxdb/
+    configs:
+      - source: influxdb_conf
+        target: /etc/influxdb/influxdb.conf
+    networks:
+      - tick_net
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  kapacitor:
+    image: kapacitor:latest
+    container_name: kapacitor
+    volumes:
+      - kapacitor_data:/var/lib/kapacitor
+      - ./kapacitor/:/etc/kapacitor/
+    configs:
+      - source: kapacitor_conf
+        target: /etc/kapacitor/kapacitor.conf
+    networks:
+      - tick_net
+    # depends_on:
+    #   - influxdb
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+  chronograf:
+    image: chronograf:latest
+    container_name: chronograf
+    ports:
+      - 8888:8888
+    volumes:
+      - chronograf_data:/var/lib/chronograf
+    environment:
+      - RESOURCES_PATH:/usr/share/chronograf/resources
+    networks:
+      - tick_net
+    # depends_on:
+    #   - influxdb
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+
+networks:
+  tick_net:
+    driver: overlay
+
+volumes:
+  influxdb_data: {}
+  kapacitor_data: {}
+  chronograf_data: {}
+
+configs:
+  telegraf_conf:
+    file: ./telegraf/telegraf.conf
+  influxdb_conf:
+    file: ./influxdb/influxdb.conf
+  kapacitor_conf: 
+    file: ./kapacitor/kapacitor.conf

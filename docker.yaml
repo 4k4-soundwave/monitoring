@@ -1,0 +1,72 @@
+version: "3.7"
+​
+services:
+  telegraf:
+    image: telegraf:latest
+    environment:
+      HOSTNAME: "telegraf-mac-os"
+    configs:
+      - source: telegraf_conf
+        target: /etc/telegraf/telegraf.conf
+    networks:
+      - tick_net
+​
+  influxdb:
+    image: influxdb:1.8-alpine
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+    configs:
+      - source: influxdb_conf
+        target: /etc/influxdb/influxdb.conf
+    networks:
+      - tick_net
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+​
+  chronograf:
+    image: chronograf:latest
+    ports:
+      - "8888:8888"
+    volumes:
+      - chronograf_data:/var/lib/chronograf
+    environment:
+      RESOURCES_PATH: "/usr/share/chronograf/resources"
+    networks:
+      - tick_net
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+​
+  kapacitor:
+    image: "kapacitor"
+    volumes:
+      - kapacitor_data:/var/lib/kapacitor
+    configs:
+      - source: kapacitor_conf
+        target: /etc/kapacitor/kapacitor.conf
+    networks:
+      - tick_net
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+​
+networks:
+  tick_net:
+    driver: overlay
+​
+volumes:
+  influxdb_data:
+  chronograf_data:
+  kapacitor_data:
+​
+configs:
+  telegraf_conf:
+    file: ./telegraf/telegraf.conf
+  influxdb_conf:
+    file: ./influxdb/influxdb.conf
+  kapacitor_conf: 
+    file: ./kapacitor/kapacitor.conf
