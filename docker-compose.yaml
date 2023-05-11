@@ -43,6 +43,11 @@ services:
     configs:
       - source: kapacitor_conf
         target: /etc/kapacitor/kapacitor.conf
+    environment:
+      KAPACITOR_HOSTNAME: kapacitor
+      KAPACITOR_INFLUXDB_0_URLS_0: http://influxdb:8086
+    links:
+      - influxdb
     networks:
       - tick_net
     # depends_on:
